@@ -1,0 +1,4 @@
+# Configuration for voyager daemon
+
+#VOYAGER_SWAP_ENDPOINT=http://localhost:8545
+#VOYAGER_RESOLVER_OPTIONS=

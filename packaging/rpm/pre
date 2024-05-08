@@ -1,0 +1,19 @@
+if [ $1 -eq 1 ] ; then
+    # Initial installation
+    if ! getent passwd voyager > /dev/null; then
+        useradd -r -d /var/lib/voyager -s /sbin/nologin -U voyager
+    fi
+    if getent passwd voyager-clef > /dev/null; then
+        usermod -a -G voyager-clef voyager > /dev/null
+    fi
+    if ! test -d /var/lib/voyager; then
+        mkdir -p /var/lib/voyager
+        chmod 0750 /var/lib/voyager
+        chown -R voyager:voyager /var/lib/voyager
+    fi
+    if ! test -f /var/lib/voyager/password; then
+        < /dev/urandom tr -dc _A-Z-a-z-0-9 2> /dev/null | head -c32 > /var/lib/voyager/password
+        chmod 0600 /var/lib/voyager/password
+        chown voyager:voyager /var/lib/voyager/password
+    fi
+fi

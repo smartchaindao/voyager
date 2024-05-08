@@ -1,0 +1,41 @@
+/dist
+/.idea
+/.vscode
+/voyager
+
+# Compiled Object files, Static and Dynamic libs (Shared Objects)
+*.o
+*.a
+*.so
+
+# Folders
+_obj
+_test
+
+# Architecture specific extensions/prefixes
+*.[568vq]
+[568vq].out
+
+*.cgo1.go
+*.cgo2.c
+_cgo_defun.c
+_cgo_gotypes.go
+_cgo_export.*
+
+_testmain.go
+
+*.exe
+*.test
+*.prof
+
+.DS_Store
+cmd/keys/
+cmd/statestore/
+cmd/localstore/
+cmd/backUp/
+cmd/backUp2/
+cmd/resource/
+cmd/excuteDir/
+cmd/resource/
+
+pkg/cpc

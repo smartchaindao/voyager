@@ -1,0 +1,66 @@
+version: "3"
+
+services:
+  clef-1:
+    image: yanhuangpai/clef:0.4.9
+    restart: unless-stopped
+    environment:
+      - CLEF_CHAINID
+    volumes:
+      - clef-1:/app/data
+    command: full
+
+  voyager-1:
+    image: yanhuangpai/voyager:beta
+    restart: unless-stopped
+    environment:
+      - VOYAGER_API_ADDR
+      - VOYAGER_BOOTNODE
+      - VOYAGER_BOOTNODE_MODE
+      - VOYAGER_CLEF_SIGNER_ENABLE
+      - VOYAGER_CLEF_SIGNER_ENDPOINT=http://clef-1:8550
+      - VOYAGER_CONFIG
+      - VOYAGER_CORS_ALLOWED_ORIGINS
+      - VOYAGER_DATA_DIR
+      - VOYAGER_DB_CAPACITY
+      - VOYAGER_DB_OPEN_FILES_LIMIT
+      - VOYAGER_DB_BLOCK_CACHE_CAPACITY
+      - VOYAGER_DB_WRITE_BUFFER_SIZE
+      - VOYAGER_DB_DISABLE_SEEKS_COMPACTION
+      - VOYAGER_DEBUG_API_ADDR
+      - VOYAGER_DEBUG_API_ENABLE
+      - VOYAGER_GATEWAY_MODE
+      - VOYAGER_GLOBAL_PINNING_ENABLE
+      - VOYAGER_NAT_ADDR
+      - VOYAGER_NETWORK_ID
+      - VOYAGER_P2P_ADDR
+      - VOYAGER_P2P_QUIC_ENABLE
+      - VOYAGER_P2P_WS_ENABLE
+      - VOYAGER_PASSWORD
+      - VOYAGER_PASSWORD_FILE
+      - VOYAGER_PAYMENT_EARLY
+      - VOYAGER_PAYMENT_THRESHOLD
+      - VOYAGER_PAYMENT_TOLERANCE
+      - VOYAGER_RESOLVER_OPTIONS
+      - VOYAGER_STANDALONE
+      - VOYAGER_SWAP_ENABLE
+      - VOYAGER_SWAP_ENDPOINT
+      - VOYAGER_SWAP_FACTORY_ADDRESS
+      - VOYAGER_SWAP_INITIAL_DEPOSIT
+      - VOYAGER_TRACING_ENABLE
+      - VOYAGER_TRACING_ENDPOINT
+      - VOYAGER_TRACING_SERVICE_NAME
+      - VOYAGER_VERBOSITY
+      - VOYAGER_WELCOME_MESSAGE
+    ports:
+      - "${API_ADDR:-1633}${VOYAGER_API_ADDR:-:1633}"
+      - "${P2P_ADDR:-1634}${VOYAGER_P2P_ADDR:-:1634}"
+      - "${DEBUG_API_ADDR:-127.0.0.1:1635}${VOYAGER_DEBUG_API_ADDR:-:1635}"
+    volumes:
+      - voyager-1:/home/voyager/.voyager
+    command: start
+    depends_on:
+      - clef-1
+volumes:
+  clef-1:
+  voyager-1:

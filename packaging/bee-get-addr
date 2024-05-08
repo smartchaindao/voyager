@@ -1,0 +1,38 @@
+#!/bin/sh
+
+if [ ! `id -u` -eq 0 ] ; then
+    echo "
+This script requires root priviledges, use sudo.
+"
+    exit 1
+fi
+
+RESP=$(/usr/bin/voyager init --config /etc/voyager/voyager.yaml 2>&1)
+case "$RESP" in
+    Error*|*'No such file'*)
+        echo "
+The voyager node has returned an error, probably because the voyager-clef external signer is enabled, but the node couldn't connect to it.
+
+Check https://docs.ethinfinity.org/ for more info.
+
+Fix the configuration and try again.
+
+The node's output was:
+        "
+        echo "$RESP"
+        ;;
+    *)
+        ETH_ADDRESS=$(echo "$RESP" | grep ethereum | cut -d' ' -f6 | tr -d '"')
+        echo "
+Please make sure there is sufficient ETH and IFI available on the node's Ethereum address: $ETH_ADDRESS.
+
+You can get both Goerli ETH and Goerli IFI via the Ifiaar at https://ifi.ethinfinity.org/?transaction=buy&amount=10&slippage=30&receiver=0x$ETH_ADDRESS
+
+Or you can join us on Discord (at https://discord.gg/ykCupZMuww) and ask our bot for a sprinkle in the #faucet-request channel.
+
+Once the node's wallet has received the funds it will begin joining the Infinity network.
+
+See the docs for more at https://docs.ethinfinity.org/docs/.
+        "
+        ;;
+esac

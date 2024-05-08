@@ -1,0 +1,19 @@
+// Copyright 2020 The Infinity Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
+syntax = "proto3";
+
+package hive;
+
+option go_package = "pb";
+
+message Peers {
+    repeated IfiAddress peers = 1;
+}
+
+message IfiAddress {
+    bytes Underlay = 1;
+    bytes Signature = 2;
+    bytes Overlay = 3;
+}

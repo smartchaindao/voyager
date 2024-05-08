@@ -1,0 +1,37 @@
+// Copyright 2020 The Smart Chain Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
+package settlement
+
+import (
+	"context"
+	"errors"
+	"math/big"
+
+	"github.com/yanhuangpai/voyager/pkg/infinity"
+)
+
+var (
+	ErrPeerNoSettlements = errors.New("no settlements for peer")
+)
+
+// Interface is the interface used by Accounting to trigger settlement
+type Interface interface {
+	// Pay initiates a payment to the given peer
+	// It should return without error it is likely that the payment worked
+	Pay(ctx context.Context, peer infinity.Address, amount *big.Int) error
+	// TotalSent returns the total amount sent to a peer
+	TotalSent(peer infinity.Address) (totalSent *big.Int, err error)
+	// TotalReceived returns the total amount received from a peer
+	TotalReceived(peer infinity.Address) (totalSent *big.Int, err error)
+	// SettlementsSent returns sent settlements for each individual known peer
+	SettlementsSent() (map[string]*big.Int, error)
+	// SettlementsReceived returns received settlements for each individual known peer
+	SettlementsReceived() (map[string]*big.Int, error)
+	// SetNotifyPaymentFunc sets the NotifyPaymentFunc to notify
+	SetNotifyPaymentFunc(notifyPaymentFunc NotifyPaymentFunc)
+}
+
+// NotifyPaymentFunc is called when a payment from peer was successfully received
+type NotifyPaymentFunc func(peer infinity.Address, amount *big.Int) error

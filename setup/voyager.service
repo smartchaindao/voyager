@@ -1,0 +1,16 @@
+[Unit]
+Description=voyager - Infinity node
+Documentation=http://www.ifichain.com
+After=network.target
+
+[Service]
+EnvironmentFile=-/etc/default/voyager
+NoNewPrivileges=true
+User=root
+Group=root
+ExecStart=/usr/bin/voyager start --config /var/lib/voyager/voyager-config-053.yaml
+Restart=on-failure
+RestartSec=5s
+
+[Install]
+WantedBy=multi-user.target

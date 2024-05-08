@@ -1,0 +1,16 @@
+[Unit]
+Description=Voyager - Ethereum Infinity node
+Documentation=https://docs.ethinfinity.org
+After=network.target
+
+[Service]
+EnvironmentFile=-/etc/default/voyager
+NoNewPrivileges=true
+User=voyager
+Group=voyager
+ExecStart=/usr/bin/voyager start --config /etc/voyager/voyager.yaml
+Restart=on-failure
+RestartSec=5s
+
+[Install]
+WantedBy=multi-user.target

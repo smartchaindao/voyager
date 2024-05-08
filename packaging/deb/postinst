@@ -1,0 +1,43 @@
+#!/bin/sh -e
+
+if [ "$1" = "configure" ]; then
+    if [ -z "$2" ]; then
+        # initial installation
+        if [ ! -f /var/lib/voyager/keys/libp2p.key ]; then
+            /usr/bin/voyager init --config /etc/voyager/voyager.yaml >/dev/null
+            chown -R voyager:voyager /var/lib/voyager/keys
+        fi
+        echo "
+Logs:   journalctl -f -u voyager.service
+Config: /etc/voyager/voyager.yaml
+
+Voyager has SWAP enabled and by default is using slock.it goerli ethereum endpoint.
+It is recommended to use external signer with voyager.
+Check documentation for more info:
+- SWAP https://docs.ethinfinity.org/docs/installation/manual#swap-bandwidth-incentives
+- External signer https://docs.ethinfinity.org/docs/installation/voyager-clef
+
+After you finish configuration run 'sudo voyager-get-addr'.
+        "
+    fi
+
+    # allow group members (voyager user) to use clef's socket
+    if [ -S /var/lib/voyager-clef/clef.ipc ]; then
+        chmod 660 /var/lib/voyager-clef/clef.ipc
+    fi
+
+    deb-systemd-helper unmask voyager.service >/dev/null || true
+
+    if deb-systemd-helper --quiet was-enabled voyager.service; then
+        deb-systemd-helper enable voyager.service >/dev/null || true
+    else
+        deb-systemd-helper update-state voyager.service >/dev/null || true
+    fi
+    if [ -d /run/systemd/system ]; then
+        systemctl --system daemon-reload >/dev/null || true
+        # upgrade
+        if [ ! -z "$2" ]; then
+            deb-systemd-invoke start voyager.service >/dev/null || true
+        fi
+    fi
+fi

@@ -1,0 +1,299 @@
+project_name: voyager
+
+builds:
+  - id: linux
+    main: ./cmd/voyager
+    binary: voyager
+    flags:
+      - -v
+      - -trimpath
+    ldflags:
+      - -s -w -X github.com/yanhuangpai/voyager.version={{.Version}} -X github.com/yanhuangpai/voyager.commit={{.ShortCommit}}
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+    goarch:
+      - amd64
+      - 386
+      - arm64
+      - arm
+    goarm:
+      - 7
+  - id: windows
+    main: ./cmd/voyager
+    binary: voyager
+    flags:
+      - -v
+      - -trimpath
+    ldflags:
+      - -s -w -X github.com/yanhuangpai/voyager.version={{.Version}} -X github.com/yanhuangpai/voyager.commit={{.ShortCommit}}
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - windows
+    goarch:
+      - amd64
+      - 386
+  - id: darwin
+    main: ./cmd/voyager
+    binary: voyager
+    flags:
+      - -v
+      - -trimpath
+    ldflags:
+      - -s -w -X github.com/yanhuangpai/voyager.version={{.Version}} -X github.com/yanhuangpai/voyager.commit={{.ShortCommit}}
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - darwin
+    goarch:
+      - amd64
+
+snapshot:
+  name_template: "{{.Tag}}-snapshot"
+
+archives:
+  -
+    name_template: "{{ tolower .ProjectName }}-{{ tolower .Os }}-{{ tolower .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}"
+    format: binary
+  -
+    id: scoop
+    builds:
+    - windows
+    name_template: "{{ tolower .ProjectName }}-{{ tolower .Os }}-{{ tolower .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}"
+    format: zip
+    wrap_in_directory: false
+    files:
+    - packaging/scoop/voyager.yaml
+    - LICENSE
+    - README.md
+  -
+    id: homebrew
+    builds:
+    - darwin
+    name_template: "{{ tolower .ProjectName }}-{{ tolower .Os }}-{{ tolower .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}"
+    files:
+    - packaging/homebrew/voyager.yaml
+    - packaging/homebrew/voyager-get-addr
+    - LICENSE
+    - README.md
+
+nfpms:
+  - file_name_template: "{{ tolower .ProjectName }}_{{ tolower .Version }}_{{ tolower .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}"
+
+    vendor: Ethereum Infinity
+    homepage: https://infinity.ethereum.org/
+
+    maintainer: Janoš Guljaš <janos@ethinfinity.org>
+
+    description: Infinity Voyager node
+
+    license: GPL-3
+
+    dependencies:
+      - ca-certificates
+      - adduser
+
+    formats:
+      - deb
+      - rpm
+    
+    files:
+      "packaging/voyager.service": "/lib/systemd/system/voyager.service"
+      "packaging/voyager-get-addr": "/usr/bin/voyager-get-addr"
+
+    config_files:
+      "packaging/voyager.yaml": "/etc/voyager/voyager.yaml"
+      "packaging/default": "/etc/default/voyager"
+
+    overrides:
+      deb:
+        dependencies:
+          - passwd
+          - ca-certificates
+        scripts:
+          preinstall: ./packaging/deb/preinst
+          postinstall: ./packaging/deb/postinst
+          preremove: ./packaging/deb/prerm
+          postremove: ./packaging/deb/postrm
+      rpm:
+        dependencies:
+          - ca-certificates
+          - shadow-utils
+        scripts:
+          preinstall: ./packaging/rpm/pre
+          postinstall: ./packaging/rpm/post
+          preremove: ./packaging/rpm/preun
+          postremove: ./packaging/rpm/postun
+
+    bindir: /usr/bin
+
+scoop:
+  url_template: "https://github.com/yanhuangpai/voyager/releases/download/{{ .Tag }}/{{ .ArtifactName }}"
+  bucket:
+    owner: yanhuangpai
+    name: scoop
+    token: "{{ .Env.SCOOP_PAT }}"
+
+  commit_author:
+    name: voyager-worker
+    email: voyager-worker@ethinfinity.org
+
+  commit_msg_template: "Scoop update for {{ .ProjectName }} version {{ .Tag }}"
+
+  homepage: "https://github.com/yanhuangpai/voyager"
+
+  description: "Infinity client implemented in Go."
+
+  license: BSD-3-Clause
+
+  persist:
+  - "data"
+  - "packaging/scoop/voyager.yaml"
+
+  post_install:
+    - "Write-Host 'Running postinstall command'"
+    - "if(!(Test-Path $persist_dir\\voyager.yaml)){New-Item -ItemType SymbolicLink -Path \"$persist_dir\\voyager.yaml\" -Target \"$persist_dir\\packaging\\scoop\\voyager.yaml\" | Out-Null}"
+    - "(Get-Content -path $persist_dir\\voyager.yaml -Raw) -replace './voyager.yaml',\"$persist_dir\\voyager.yaml\" | Set-Content -Path $persist_dir\\voyager.yaml"
+    - "(Get-Content -path $persist_dir\\voyager.yaml -Raw) -replace './data',\"$persist_dir\\data\" | Set-Content -Path $persist_dir\\voyager.yaml"
+    - "(Get-Content -path $persist_dir\\voyager.yaml -Raw) -replace './password',\"$persist_dir\\password\" | Set-Content -Path $persist_dir\\voyager.yaml"
+    - "if(!(Test-Path $persist_dir\\password)){[System.Web.Security.Membership]::GeneratePassword(32,5) | Set-Content -Path $persist_dir\\password}"
+    - "if(sc.exe query InfinityVoyagerSvc | Select-String FAILED){sc.exe create InfinityVoyagerSvc binPath= \"$dir\\voyager.exe start --config=$persist_dir\\voyager.yaml\" type= share start= auto displayName= \"Voyager\"; sc.exe description InfinityVoyagerSvc \"Infinity client implemented in Go.\"}"
+    - "if($global){$ETH_ADDRESS = (((C:\\ProgramData\\scoop\\shims\\voyager.exe init --config=$persist_dir\\voyager.yaml | Select-String ethereum) -split ' ‘)[-1]).Trim('\"')} else {$ETH_ADDRESS = (((voyager.exe init --config=$persist_dir\\voyager.yaml | Select-String ethereum) -split ' ‘)[-1]).Trim('\"')}; Write-Host \"Please make sure there is sufficient eth and ifi available on $ETH_ADDRESS address.\nYou can get both goerli eth and goerli ifi from https://ifi.ethinfinity.org/?transaction=buy&amount=10&slippage=30&receiver=0x$ETH_ADDRESS\""
+    - "Write-Host \"After the initial fund deploy Voyager chequebook with [sudo] $dir\\voyager.exe deploy --config=$persist_dir\\voyager.yaml\""
+    - "Write-Host 'Start Voyager service with [sudo] sc.exe start InfinityVoyagerSvc'" 
+
+brews:
+  - name: infinity-voyager
+    tap:
+      owner: yanhuangpai
+      name: homebrew-tap
+      token: "{{ .Env.HOMEBREW_TAP_PAT }}"
+    ids:
+      - homebrew
+    commit_author:
+      name: voyager-worker
+      email: voyager-worker@ethinfinity.org
+    homepage: https://infinity.ethereum.org/
+    description: Ethereum Infinity node
+    caveats: |
+        Logs:   #{var}/log/infinity-voyager/voyager.log
+        Config: #{etc}/infinity-voyager/voyager.yaml
+
+        Voyager has SWAP enabled and by default is using slock.it goerli ethereum endpoint.
+        It is recommended to use external signer with voyager.
+        Check documentation for more info:
+        - SWAP https://docs.ethinfinity.org/docs/installation/manual#swap-bandwidth-incentives
+        - External signer https://docs.ethinfinity.org/docs/installation/voyager-clef
+
+        After you finish configuration run 'voyager-get-addr'.
+    test: |
+      system "#{bin}/voyager version"
+    install: |
+      (etc/"infinity-voyager").mkpath
+      (var/"lib/infinity-voyager").mkpath
+      bin.install ["voyager", "packaging/homebrew/voyager-get-addr"]
+      etc.install "packaging/homebrew/voyager.yaml" => "infinity-voyager/voyager.yaml" unless File.exists? etc/"infinity-voyager/voyager.yaml"
+    post_install: |
+      unless File.exists? "#{var}/lib/infinity-voyager/password"
+      system("openssl", "rand", "-out", var/"lib/infinity-voyager/password", "-base64", "32")
+      end
+      system(bin/"voyager", "init", "--config", etc/"infinity-voyager/voyager.yaml", ">/dev/null", "2>&1")
+    plist: |
+      <?xml version="1.0" encoding="UTF-8"?>
+      <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+      <plist version="1.0">
+      <dict>
+        <key>KeepAlive</key>
+        <true/>
+        <key>Label</key>
+        <string>#{plist_name}</string>
+        <key>ProgramArguments</key>
+        <array>
+          <string>#{bin}/voyager</string>
+          <string>start</string>
+          <string>--config</string>
+          <string>#{etc}/infinity-voyager/voyager.yaml</string>
+        </array>
+        <key>RunAtLoad</key>
+        <true/>
+        <key>WorkingDirectory</key>
+        <string>/usr/local</string>
+        <key>StandardOutPath</key>
+        <string>#{var}/log/infinity-voyager/voyager.log</string>
+        <key>StandardErrorPath</key>
+        <string>#{var}/log/infinity-voyager/voyager.log</string>
+      </dict>
+      </plist>
+
+dockers:
+- image_templates:
+  - "yanhuangpai/voyager:{{ .Version }}-amd64"
+  use_buildx: true
+  ids:
+    - linux
+  goarch: amd64
+  dockerfile: Dockerfile.goreleaser
+  build_flag_templates:
+  - "--platform=linux/amd64"
+  - "--pull"
+  - "--label=org.opencontainers.image.created={{.Date}}"
+  - "--label=org.opencontainers.image.title={{.ProjectName}}"
+  - "--label=org.opencontainers.image.revision={{.FullCommit}}"
+  - "--label=org.opencontainers.image.version={{.Version}}"
+- image_templates:
+  - "yanhuangpai/voyager:{{ .Version }}-armv7"
+  use_buildx: true
+  ids:
+    - linux
+  goarch: arm
+  goarm: 7
+  dockerfile: Dockerfile.goreleaser
+  build_flag_templates:
+  - "--platform=linux/arm/v7"
+  - "--pull"
+  - "--label=org.opencontainers.image.created={{.Date}}"
+  - "--label=org.opencontainers.image.title={{.ProjectName}}"
+  - "--label=org.opencontainers.image.revision={{.FullCommit}}"
+  - "--label=org.opencontainers.image.version={{.Version}}"
+- image_templates:
+  - "yanhuangpai/voyager:{{ .Version }}-arm64v8"
+  use_buildx: true
+  ids:
+    - linux
+  goarch: arm64
+  dockerfile: Dockerfile.goreleaser
+  build_flag_templates:
+  - "--platform=linux/arm64/v8"
+  - "--pull"
+  - "--label=org.opencontainers.image.created={{.Date}}"
+  - "--label=org.opencontainers.image.title={{.ProjectName}}"
+  - "--label=org.opencontainers.image.revision={{.FullCommit}}"
+  - "--label=org.opencontainers.image.version={{.Version}}"
+docker_manifests:
+- name_template: yanhuangpai/voyager:{{ .Major }}
+  image_templates:
+  - yanhuangpai/voyager:{{ .Version }}-amd64
+  - yanhuangpai/voyager:{{ .Version }}-armv7
+  - yanhuangpai/voyager:{{ .Version }}-arm64v8
+- name_template: yanhuangpai/voyager:{{ .Major }}.{{ .Minor }}
+  image_templates:
+  - yanhuangpai/voyager:{{ .Version }}-amd64
+  - yanhuangpai/voyager:{{ .Version }}-armv7
+  - yanhuangpai/voyager:{{ .Version }}-arm64v8
+- name_template: yanhuangpai/voyager:{{ .Major }}.{{ .Minor }}.{{ .Patch }}
+  image_templates:
+  - yanhuangpai/voyager:{{ .Version }}-amd64
+  - yanhuangpai/voyager:{{ .Version }}-armv7
+  - yanhuangpai/voyager:{{ .Version }}-arm64v8
+- name_template: yanhuangpai/voyager:latest
+  image_templates:
+  - yanhuangpai/voyager:{{ .Version }}-amd64
+  - yanhuangpai/voyager:{{ .Version }}-armv7
+  - yanhuangpai/voyager:{{ .Version }}-arm64v8
+- name_template: yanhuangpai/voyager:beta
+  image_templates:
+  - yanhuangpai/voyager:{{ .Version }}-amd64
+  - yanhuangpai/voyager:{{ .Version }}-armv7
+  - yanhuangpai/voyager:{{ .Version }}-arm64v8
